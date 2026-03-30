@@ -4,16 +4,22 @@ const {adminAuth, userAuth} = require("./middlewares/auth");
 const app = express();
 
 
-app.use("/admin", adminAuth);
-app.use("/user", userAuth);
+app.get("/users", (req,res)=>{
+  // try{
+    throw new Error("Something went wrong");
+    res.send("Users route");
+  // }
+  // catch(err){
+  //   res.status(500).send("Internal Server Error");
+  // }
+});
 
-app.get("/admin/getAllUsers", (req, res) => {
-    res.send("List of all users");
-})
-
-app.get("/user/createPost", (req, res) => {
-    res.send("Post created successfully");
-})
+app.use("/", (err, req, res, next) => {
+if(err){
+res.status(500).send("Something broke!");
+}
+  
+});
 
 app.listen(7777, () => {
   console.log("Server is running on port 7777");
