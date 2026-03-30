@@ -1,26 +1,35 @@
 const express = require("express");
-const {adminAuth, userAuth} = require("./middlewares/auth");
-
+const { connectDB } = require("./config/database");
+const { User } = require("./models/user");
 const app = express();
 
+app.post("/signup", async(req, res) => {
+  const user = new User({
+    firstName:"Nikita",
+    lastName:"Jaiswal",
+    emailId:"test2@gmail.com",
+    password:"test1234",
+    age:22,
+    gender:"female" 
 
-app.get("/users", (req,res)=>{
-  // try{
-    throw new Error("Something went wrong");
-    res.send("Users route");
-  // }
-  // catch(err){
-  //   res.status(500).send("Internal Server Error");
-  // }
+  })
+  try{
+  await user.save()
+  res.send("User added successfully");
+  }
+  catch(err){
+    res.status(500).send("Error adding user");
+  }
+
 });
 
-app.use("/", (err, req, res, next) => {
-if(err){
-res.status(500).send("Something broke!");
-}
-  
-});
-
-app.listen(7777, () => {
-  console.log("Server is running on port 7777");
-});
+connectDB()
+  .then(() => {
+    console.log("Connected to MongoDB");
+    app.listen(7777, () => {
+      console.log("Server is running on port 7777");
+    });
+  })
+  .catch((err) => {
+    console.error("Error connecting to MongoDB", err);
+  });
