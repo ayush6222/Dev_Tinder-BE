@@ -3,11 +3,14 @@ const { connectDB } = require("./config/database");
 const { validateSignupData } = require("./utils/validation");
 const validator = require("validator");
 const bcrypt = require('bcrypt');
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 const { User } = require("./models/user");
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.post("/signup", async(req, res) => {
   const userData = req.body;
@@ -38,30 +41,40 @@ app.post("/login", async(req,res) =>{
   try{
     const user = await User.findOne({emailId});
     if(!user){
-      return res.status(404).send("User not found.");
+      return res.status(404).send("Invalid email or password.");
     }
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if(!isPasswordMatch){
       return res.status(400).send("Invalid email or password.");
     }
-
-    res.send("Login successful");
+    const token = jwt.sign({userId: user._id}, "dev_tinder_ayush", {expiresIn: "1h"}, (err, token) => {
+      if(err){
+        return res.status(500).send("Error generating token");
+      }
+      res.cookie("token", token, {httpOnly: true});
+      res.send("Login successful");
+    });
   }
   catch(err){
-    console.error("Error during login", err.message);
     res.status(500).send(err.message);
   }
 
 })
 
 app.post("/fetchAllUsers", async(req, res) => {
+  const cookies = req.cookies;
+  const {token} = cookies;
+
+  const decoded = jwt.verify(token, "dev_tinder_ayush");
+
+
+
   try{
     const users = await User.find();
     res.json(users);
   }
   catch(err){
-    console.error("Error fetching users", err.message);
     res.status(500).send(err.message);
   }
 })
@@ -73,7 +86,6 @@ app.delete("/user/:id", async(req, res) => {
     res.send("User deleted successfully");
   }
   catch(err){
-    console.error("Error deleting user", err.message);
     res.status(500).send(err.message);
   } 
 });
@@ -95,10 +107,31 @@ app.patch("/user/:id", async(req, res) => {
     res.send("User updated successfully");
   }
   catch(err){
-    console.error("Error updating user", err.message);
     res.status(500).send(err.message);
   } 
 });
+
+app.get("/profile", async(req,res) =>{
+  const cookies = req.cookies;
+  const {token} = cookies;
+
+  if(!token){
+    return res.status(401).send("Unauthorized: No token provided");
+  }
+  const decoded = jwt.verify(token, "dev_tinder_ayush");
+  const {userId} = decoded;
+
+  try{
+    const user = await User.findById(userId);
+    if(!user){
+      return res.status(404).send("User not found");
+    }
+    res.json(user); 
+  }
+  catch(err){
+    res.status(500).send(err.message);
+  }
+})
 connectDB()
   .then(() => {
     console.log("Connected to MongoDB");
