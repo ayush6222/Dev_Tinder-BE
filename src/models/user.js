@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const validator = require('validator');
 const userSchema = new mongoose.Schema({
     firstName:{
         type:String,
@@ -13,9 +13,19 @@ const userSchema = new mongoose.Schema({
         type:String,
         required:true,
         trim: true,
+        validate(value){
+            if(!validator.isEmail(value)){
+                throw new Error("Invalid email format" + value);
+            }
+        }
     },
     password:{
         type:String,
+        validate(value){
+            if(!validator.isStrongPassword(value, {minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, minSymbols: 1})){
+                throw new Error("Password must be at least 8 characters long and include at least one lowercase letter, one uppercase letter, one number, and one symbol.");
+            }
+        }
     },
     age:{
         type:Number,

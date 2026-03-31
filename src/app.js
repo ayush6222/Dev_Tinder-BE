@@ -1,6 +1,7 @@
 const express = require("express");
 const { connectDB } = require("./config/database");
 const { User } = require("./models/user");
+
 const app = express();
 
 app.use(express.json());
@@ -8,6 +9,7 @@ app.use(express.json());
 app.post("/signup", async(req, res) => {
   const userData = req.body;
   const user = new User(userData);
+
   try{
   await user.save()
   res.send("User added successfully mittar");
