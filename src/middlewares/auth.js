@@ -1,28 +1,26 @@
+const jwt = require("jsonwebtoken");
+const { User } = require("../models/user");
 
-const adminAuth = (req, res, next) => {
-    console.log("Enetered admin auth middleware");
-  const token = "1234567890"; 
-  const isAdmin = token === "1234567890"; 
-
-  if(!isAdmin) {
+const userAuth = async(req, res, next) => {
+  try{
+  const {token} = req.cookies;
+  if(!token){
+    return res.status(401).send("Unauthorized: No token provided");
+  }
+  const decoded = await jwt.verify(token, "dev_tinder_ayush");
+  const {userId} = decoded;
+  const user = await User.findById(userId);
+  if(!user) {
     res.status(401).send("Unauthorized");
   }
   else{
+    req.user = user;
     next();
   }
-};
-
-
-const userAuth = (req, res, next) => {
-    console.log("Enetered user auth middleware");
-  const token = "xyz"; 
-  const isAdmin = token === "xyz"; 
-
-  if(!isAdmin) {
-    res.status(401).send("Unauthorized");
   }
-  else{
-    next();
-  }
-};
-module.exports = {adminAuth, userAuth};
+  catch(err){
+    res.status(401).send("Unauthorized: Invalid token");
+  } 
+
+}
+module.exports = {userAuth};

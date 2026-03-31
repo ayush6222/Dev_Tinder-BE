@@ -5,12 +5,14 @@ const validator = require("validator");
 const bcrypt = require('bcrypt');
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
+const { userAuth } = require("./middlewares/auth");
 const { User } = require("./models/user");
 
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+
 
 app.post("/signup", async(req, res) => {
   const userData = req.body;
@@ -48,7 +50,7 @@ app.post("/login", async(req,res) =>{
     if(!isPasswordMatch){
       return res.status(400).send("Invalid email or password.");
     }
-    const token = jwt.sign({userId: user._id}, "dev_tinder_ayush", {expiresIn: "1h"}, (err, token) => {
+    const token = jwt.sign({userId: user._id}, "dev_tinder_ayush", {expiresIn: "7d"}, (err, token) => {
       if(err){
         return res.status(500).send("Error generating token");
       }
@@ -111,21 +113,9 @@ app.patch("/user/:id", async(req, res) => {
   } 
 });
 
-app.get("/profile", async(req,res) =>{
-  const cookies = req.cookies;
-  const {token} = cookies;
-
-  if(!token){
-    return res.status(401).send("Unauthorized: No token provided");
-  }
-  const decoded = jwt.verify(token, "dev_tinder_ayush");
-  const {userId} = decoded;
-
+app.get("/profile", userAuth, async(req,res) =>{
   try{
-    const user = await User.findById(userId);
-    if(!user){
-      return res.status(404).send("User not found");
-    }
+      const user = req.user;
     res.json(user); 
   }
   catch(err){
