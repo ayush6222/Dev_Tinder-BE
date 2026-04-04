@@ -14,7 +14,7 @@ authRouter.post("/signup", async(req, res) => {
   
   validateSignupData(userData);
 
-  const passwordHash = await bcrypt.hash(userData.password, 10);
+  const passwordHash = await user.passwordHashing(userData.password);
   user.password = passwordHash;
 
   try{
