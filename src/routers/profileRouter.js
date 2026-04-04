@@ -1,48 +1,74 @@
 const express = require("express");
 const { User } = require("../models/user");
 const { userAuth } = require("../middlewares/auth");
+const { validateUpdateData, validatePasswordResetData } = require("../utils/validation");
 
 const profileRouter = express.Router();
 
-profileRouter.delete("/profile/:id", async(req, res) => {
-  const userId = req.params.id;
-  try{
+profileRouter.delete("/profile/delete", userAuth, async (req, res) => {
+
+  try {
+    const userId = req.user._id;
+    console.log(userId);
     await User.findByIdAndDelete(userId);
-    res.send("User deleted successfully");
+    res.send(`User with id ${req.user.firstName} deleted successfully`);
   }
-  catch(err){
+  catch (err) {
     res.status(500).send(err.message);
-  } 
+  }
 });
 
-profileRouter.patch("/profile/:id", async(req, res) => {
-  const userId = req.params.id;
+profileRouter.patch("/profile/update", userAuth, async (req, res) => {
   const updateData = req.body;
-  const ALLOWED_UPDATES = ["firstName", "lastName", "skills", "shortDesc"];
-  const isValidUpdate = Object.keys(updateData).every((key) => ALLOWED_UPDATES.includes(key));
+  const { isValid, message } = validateUpdateData(updateData);
+  if (!isValid) {
+    return res.status(400).send(message);
+  }
+  try {
+    const user = req.user;
+    Object.keys(updateData).forEach((key) => {
+      user[key] = updateData[key];
+    });
 
-  if(updateData.skills.length>10){
-    return res.status(400).send("Skills cannot have more than 10 items.");
+    await user.save();
+    res.json({ message: `${user.firstName} updated successfully`, data: user });
   }
-  if(!isValidUpdate){
-    return res.status(400).send("Invalid updates! Only firstName, lastName, skills and shortDesc can be updated.");
-  }
-  try{
-    await User.findByIdAndUpdate(userId, updateData, {new: true, runValidators: true});
-    res.send("User updated successfully");
-  }
-  catch(err){
+  catch (err) {
     res.status(500).send(err.message);
-  } 
+  }
 });
 
-profileRouter.get("/profile", userAuth, async(req,res) =>{
-  try{
-      const user = req.user;
-    res.json(user); 
+profileRouter.get("/profile/view", userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    res.json(user);
   }
-  catch(err){
+  catch (err) {
     res.status(500).send(err.message);
   }
 })
+
+profileRouter.patch("/profile/resetPassword", userAuth, async (req,res) =>{
+  const {oldPassword, newPassword} = req.body;
+  if(!oldPassword || !newPassword){
+    return res.status(400).send("Old password and new password are required.");
+  }
+  const { isValid, message } = validatePasswordResetData({ oldPassword, newPassword });
+  if (!isValid) {
+    return res.status(400).send(message);
+  }
+  try{
+    const user = req.user;
+    const isPasswordMatch = await user.passwordMatching(oldPassword);
+    if (!isPasswordMatch) {
+      return res.status(400).send("Old password is incorrect.");
+    }
+    user.password = await user.passwordHashing(newPassword);
+    await user.save();
+    res.json({ message: "Password updated successfully" });
+  }
+  catch (err) {
+    res.status(500).send(err.message);
+  }
+});
 module.exports = profileRouter;
