@@ -1,37 +1,52 @@
 const express = require("express");
-const cookieParser = require("cookie-parser");
-const validator = require("validator");
-const jwt = require("jsonwebtoken");
+const { userAuth } = require("../middlewares/auth");
+const { ConnectionRequest } = require("../models/connectionRequest");
 const { User } = require("../models/user");
 
 const requestRouter = express.Router();
 
 
-requestRouter.post("/sendConnectionRequest/:id", async(req, res) => {
-  const senderId = req.body.senderId;
-  const receiverId = req.params.id;
+requestRouter.post("/sendConnectionRequest/:status/:toUserId", userAuth, async (req, res) => {
+  const senderId = req.user._id;
+  const receiverId = req.params.toUserId;
+  const status = req.params.status;
 
-  try{
-    const sender = await User.findById(senderId);
-    const receiver = await User.findById(receiverId);
+  const allowedStatuses = ["ignored", "interested"];
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({ message: "Invalid status value " + status });
+  };
 
-    if(!sender || !receiver){
-      return res.status(404).send("Sender or receiver not found.");
-    }
 
-    if(sender.sentRequests.includes(receiverId)){
-      return res.status(400).send("Request already sent.");
-    }
+  const existingRequest = await ConnectionRequest.findOne({
+    $or: [
+      { senderId, receiverId },
+      { senderId: receiverId, receiverId: senderId }
+    ]
+  })
 
-    sender.sentRequests.push(receiverId);
-    receiver.receivedRequests.push(senderId);
-
-    await sender.save();
-    await receiver.save();
-
-    res.send("Request sent successfully");
+  if (existingRequest) {
+    return res.status(400).json({ message: "Connection request already exists between these users." });
   }
-  catch(err){
+
+  const receiverExists = await User.findById(receiverId);
+  if (!receiverExists) {
+    return res.status(404).json({ message: "Receiver user not found." });
+  }
+
+  try {
+
+
+    const requestData = new ConnectionRequest({
+      senderId,
+      receiverId: receiverId,
+      status: status
+    });
+
+    await requestData.save();
+
+    res.send("Connection request sent successfully");
+  }
+  catch (err) {
     res.status(500).send(err.message);
   }
 })
