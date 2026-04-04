@@ -36,10 +36,9 @@ const userSchema = new mongoose.Schema({
     },
     gender:{
         type:String,
-        validate(value){
-            if(!(["male", "female", "other"].includes(value.toLowerCase()))){
-                throw new Error("Gender must be either  male, female or other")
-            }
+        enum: {
+            values: ["male", "female", "other"],
+            message: "{VALUE} is not a valid gender"
         }
     },
     skills:{
@@ -61,6 +60,12 @@ userSchema.methods.passwordMatching = async function(password){
     const user = this;
     return await bcrypt.compare(password, user.password);
 }
+
+userSchema.methods.passwordHashing = async function(password){
+    return await bcrypt.hash(password, 10);
+}
+
+
 
 const User = mongoose.model("users", userSchema)
 
