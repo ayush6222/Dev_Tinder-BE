@@ -5,11 +5,13 @@ const validator = require("validator");
 const connectionRequestSchema = new mongoose.Schema({
     senderId: {
         type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
         required: true,
     },
     receiverId: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
+        ref: "users",
     },
     status: {
         type: String,
@@ -20,6 +22,8 @@ const connectionRequestSchema = new mongoose.Schema({
         }
     }
 }, { timestamps: true })
+
+connectionRequestSchema.index({ senderId: 1, receiverId: 1 }, { unique: true });
 
 connectionRequestSchema.pre("save", function(){
     const connectionRequest = this;
