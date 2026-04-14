@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
     emailId:{
         type:String,
         required:true,
+        unique: true,
         trim: true,
         validate(value){
             if(!validator.isEmail(value)){
@@ -49,6 +50,8 @@ const userSchema = new mongoose.Schema({
         default: "This is short description about me",
     }
 }, {timestamps: true})
+
+userSchema.index({firstName: 1, lastName:2});
 
 userSchema.methods.getJWTToken = function(){
     const user = this;
